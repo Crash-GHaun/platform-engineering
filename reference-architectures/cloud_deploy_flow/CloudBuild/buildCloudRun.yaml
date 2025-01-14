@@ -1,12 +1,12 @@
 steps:
-- name: 'gcr.io/cloud-builders/docker:20.10:24'
+- name: 'gcr.io/cloud-builders/docker:20.10'
   dir: 'CloudRun/'
   args: ['build',
    '--tag',
    'us-central1-docker.pkg.dev/$PROJECT_ID/random-date-app/app:latest',
    '.'
    ]
-- name: 'gcr.io/cloud-builders/docker:20.10:24'
+- name: 'gcr.io/cloud-builders/docker:20.10'
   dir: 'CloudRun/'
   args: ['push',
   'us-central1-docker.pkg.dev/$PROJECT_ID/random-date-app/app:latest'
