@@ -111,7 +111,7 @@ resource "google_cloudbuild_trigger" "build-cloudrun-deploy" {
     }
   }
 
-  filename = "CloudBuild/buildCloudRun.yaml" # Path to your Cloud Build configuration file
+  filename = "reference-architectures/cloud_deploy_flow/CloudBuild/buildCloudRun.yaml" # Path to your Cloud Build configuration file
   substitutions = {
     "_DEPLOY_GCS" = google_storage_bucket.deploy_resources_bucket.url
   }
