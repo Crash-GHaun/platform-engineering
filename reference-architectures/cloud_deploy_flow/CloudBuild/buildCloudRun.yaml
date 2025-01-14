@@ -1,18 +1,18 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  dir: 'CloudRun/'
+  dir: 'reference-architectures/cloud_deploy_flow/CloudRun/'
   args: ['build',
    '--tag',
    'us-central1-docker.pkg.dev/$PROJECT_ID/random-date-app/app:latest',
    '.'
    ]
 - name: 'gcr.io/cloud-builders/docker'
-  dir: 'CloudRun/'
+  dir: 'reference-architectures/cloud_deploy_flow/CloudRun/'
   args: ['push',
   'us-central1-docker.pkg.dev/$PROJECT_ID/random-date-app/app:latest'
   ]
 - name: 'gcr.io/cloud-builders/gcloud:129345068'
-  dir: 'CloudRun/'
+  dir: 'reference-architectures/cloud_deploy_flow/CloudRun/'
   waitFor: ['-']
   entrypoint: 'bash'
   args:
