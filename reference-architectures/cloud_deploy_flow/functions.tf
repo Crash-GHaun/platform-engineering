@@ -81,6 +81,7 @@ resource "google_cloudfunctions2_function" "functions" {
       LOCATION    = var.region
       SENDTOPICID = google_pubsub_topic.topics["deploy-commands"].name
       TRIGGER = split("/", google_cloudbuild_trigger.build-cloudrun-deploy.id)[length(split("/", google_cloudbuild_trigger.build-cloudrun-deploy.id)) - 1]
+      PIPELINE = split("/",google_clouddeploy_delivery_pipeline.primary.id)[length(split("/", google_clouddeploy_delivery_pipeline.primary.id)) -1]
     }
   }
 
