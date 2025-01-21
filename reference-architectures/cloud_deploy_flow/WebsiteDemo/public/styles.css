@@ -15,6 +15,14 @@ body {
     max-height: 75vh; /* Sets max height to 75% of the screen height */
     overflow-y: auto; /* Allow scrolling if content overflows */
   }
+
+  .message-box {
+    border: 1px solid #ccc;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto; /* Ensures that content is scrollable */
+    height: 85%;
+  }
   
   .subscription-box {
     border: 1px solid #ccc;
@@ -75,3 +83,20 @@ body {
     border: none;
   }
   
+
+  /* Additional styles specifically for build notification rows and their tooltips */
+
+/* The row inherits .message styles, but these rules adjust its look/feel */
+.build-notification-row {
+  position: relative;
+  cursor: pointer;
+  /* Override the .message background if you’d like a unique color */
+  background-color: #e6f4fa;
+}
+
+/* Slight hover effect */
+.build-notification-row:hover {
+  background-color: #d9ecfa;
+}
+
+
