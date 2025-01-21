@@ -7,10 +7,10 @@ resource "google_storage_bucket" "function_bucket" {
 
 locals {
   functions = {
-    createRelease          = "CloudFunctions/createRelease/"
-    cloudDeployInteractions = "CloudFunctions/cloudDeployInteractions/"
-    cloudDeployOperations   = "CloudFunctions/cloudDeployOperations/"
-    cloudDeployApprovals    = "CloudFunctions/cloudDeployApprovals/"
+    "create-release"           = "CloudFunctions/createRelease/"
+    "cloud-deploy-interactions" = "CloudFunctions/cloudDeployInteractions/"
+    "cloud-deploy-operations"   = "CloudFunctions/cloudDeployOperations/"
+    "cloud-deploy-approvals"    = "CloudFunctions/cloudDeployApprovals/"
   }
 }
 
@@ -80,6 +80,7 @@ resource "google_cloudfunctions2_function" "functions" {
       PROJECTID   = data.google_project.project.project_id
       LOCATION    = var.region
       SENDTOPICID = google_pubsub_topic.topics["deploy-commands"].name
+      TRIGGER = split("/", google_cloudbuild_trigger.build-cloudrun-deploy.id)[length(split("/", google_cloudbuild_trigger.build-cloudrun-deploy.id)) - 1]
     }
   }
 

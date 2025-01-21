@@ -81,7 +81,7 @@ func deployTrigger(ctx context.Context, e event.Event) error {
 	}
 
 	// Extract relevant image information from the build notification
-	log.Printf("Pulling relevant image")
+	log.Printf("Pulling relevant image: artifacts: %v", buildNotification.Artifacts)
 	image := buildNotification.Artifacts.Images[0]
 	log.Printf("Received Image from Cloud Build: %s", image)
 
