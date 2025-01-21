@@ -7,9 +7,9 @@ const port = 8080;
 const topicName = 'clouddeploy-approvals';
 
 // Replace with your actual project ID and subscription names
-const projectId = 'crash-demo-env';
+const projectId = 'thefsm93-personal-cloud';
 const subscriptionNames = [
-  'build_notifications_subscription',
+  'build-notifications-subscription',
   'deploy-commands-subscription',
   'clouddeploy-operations-subscription',
   'clouddeploy-approvals-subscription'
@@ -20,7 +20,7 @@ const pubsubClient = new PubSub({ projectId });
 
 // Store messages per subscription
 let messages = {
-  'build_notifications_subscription': [],
+  'build-notifications-subscription': [],
   'deploy-commands-subscription': [],
   'clouddeploy-operations-subscription': [],
   'clouddeploy-approvals-subscription': []
@@ -72,7 +72,7 @@ async function main() {
   app.post('/clear-messages', (req, res) => {
     // Clear the messages from all subscriptions
     messages = {
-      'build_notifications_subscription': [],
+      'build-notifications-subscription': [],
       'deploy-commands-subscription': [],
       'clouddeploy-operations-subscription': [],
       'clouddeploy-approvals-subscription': []
