@@ -1,85 +1,260 @@
-let lastMessageData = {}; // Store last fetched messages to compare updates
+let lastMessageData = {};
+// Global map to store build notifications keyed by their ID.
+let buildNotificationsMap = {};
 
-    // Function to update the messages on the webpage
-    function updateMessages() {
-      fetch('/messages')
-        .then(response => response.json())
-        .then(data => {
-          const subscriptionMap = {
-            'build_notifications_subscription': 'build_notifications_subscription',
-            'deploy-commands-subscription': 'deploy-commands-subscription',
-            'clouddeploy-operations-subscription': 'clouddeploy-operations-subscription',
-            'clouddeploy-approvals-subscription': 'clouddeploy-approvals-subscription'
-          };
+// Renders the build notifications quadrant:
+function renderBuildNotifications() {
+  const container = document.getElementById("build-notifications-subscription");
+  container.innerHTML = "";
 
-          // Loop through each subscription and update its content
-          for (const subscriptionName in subscriptionMap) {
-            const messages = data[subscriptionName] || [];
-            const messageContainer = document.getElementById(subscriptionMap[subscriptionName]);
+  // We keyed our map by buildId
+  Object.keys(buildNotificationsMap).forEach((buildId) => {
+    const msg = buildNotificationsMap[buildId];
 
-            // Only update if there are new messages
-            if (!lastMessageData[subscriptionName] || lastMessageData[subscriptionName].length !== messages.length) {
-              messageContainer.innerHTML = ''; // Clear previous messages
+    // Grab status from attributes
+    const status = msg.attributes?.status || "Unknown";
 
-              // Add new messages with pretty-printed JSON
-              messages.forEach(message => {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'message';
-                messageDiv.textContent = JSON.stringify({
-                  id: message.id,
-                  data: message.data,
-                  attributes: message.attributes
-                }, null, 2); // Prettify JSON with indentation
-                messageContainer.appendChild(messageDiv);
-              });
+    // Attempt to parse the JSON in msg.data (it has `substitutions.TRIGGER_NAME`)
+    let parsedData;
+    let triggerName = "Unknown Trigger";
+
+    try {
+      parsedData = JSON.parse(msg.data);
+      // If it’s found, override our default "Unknown Trigger"
+      if (parsedData?.substitutions?.TRIGGER_NAME) {
+        triggerName = parsedData.substitutions.TRIGGER_NAME;
+      }
+    } catch (err) {
+      // If parsing fails, leave triggerName as "Unknown Trigger"
+    }
+
+    // Create row
+    const row = document.createElement("div");
+    row.classList.add("message", "build-notification-row");
+    row.textContent = `Build ID: ${buildId} | Status: ${status} | Trigger: ${triggerName}`;
+
+    // On click, open JSON in a popup
+    row.addEventListener("click", () => {
+      const popupWindow = window.open("", "JSONPopup", "width=600,height=400,scrollbars=yes");
+      popupWindow.document.write(
+        `<pre style="font-family: monospace; white-space: pre;">${JSON.stringify(msg, null, 2)}</pre>`
+      );
+      popupWindow.document.close();
+    });
+
+    container.appendChild(row);
+  });
+}
+
+
+
+
+// Main function to fetch messages and update the UI
+function updateMessages() {
+  fetch("/messages")
+    .then((response) => response.json())
+    .then((data) => {
+      // -------------------------------------
+      // 1) BUILD NOTIFICATIONS
+      // -------------------------------------
+      const buildMessages = data["build-notifications-subscription"] || [];
+      buildMessages.forEach((msg) => {
+        const buildId = msg.attributes.buildId;
+        if (buildId) {
+          buildNotificationsMap[buildId] = msg;
+        }
+      });
+      renderBuildNotifications();
+
+      // -------------------------------------
+      // 2) DEPLOY COMMANDS 
+      // -------------------------------------
+      const deployCommands = data["deploy-commands-subscription"] || [];
+      const deployCommandsContainer = document.getElementById("deploy-commands-subscription");
+
+      if (
+        !lastMessageData["deploy-commands-subscription"] ||
+        lastMessageData["deploy-commands-subscription"].length !== deployCommands.length
+      ) {
+        deployCommandsContainer.innerHTML = "";
+        deployCommands.forEach((msg) => {
+          let command = "Unknown command";
+          try {
+            const parsed = JSON.parse(msg.data);
+            if (parsed?.command) {
+              command = parsed.command;
             }
+          } catch (err) {
+            // If parsing fails, leave command as unknown
           }
 
-          // Save the latest message data to compare on the next refresh
-          lastMessageData = data;
+          const row = document.createElement("div");
+          // Reuse the same styling (or make a custom class if you prefer)
+          row.classList.add("message", "build-notification-row");
+
+          row.textContent = `ID: ${msg.id} | Command: ${command}`;
+
+          row.addEventListener("click", () => {
+            const popupWindow = window.open("", "JSONPopup", "width=600,height=400,scrollbars=yes");
+            popupWindow.document.write(
+              `<pre style="font-family: monospace; white-space: pre;">${JSON.stringify(msg, null, 2)}</pre>`
+            );
+            popupWindow.document.close();
+          });
+
+          deployCommandsContainer.appendChild(row);
         });
-    }
+      }
 
-    // Function to clear all messages (both frontend and backend)
-    function clearMessages() {
-      fetch('/clear-messages', {
-        method: 'POST'
-      })
-      .then(response => {
-        if (response.ok) {
-          lastMessageData = {}; // Clear the frontend message data
-          updateMessages(); // Update the frontend to show empty message boxes
-        }
-      })
-      .catch(error => console.error('Error clearing messages:', error));
-    }
+      // -------------------------------------
+      // 3) CLOUD DEPLOY OPERATIONS 
+      // -------------------------------------
+      const operationsMessages = data["clouddeploy-operations-subscription"] || [];
+      const operationsContainer = document.getElementById("clouddeploy-operations-subscription");
 
-  function sendMessage() {
-    const messageInput = document.getElementById('message-input');
-    let message = messageInput.value; 
-    // Clean up the message
-    message = message.trim(); // Remove leading and trailing whitespace
-    message = message.replace(/\n/g, ''); // Remove newline characters
-    
+      if (
+        !lastMessageData["clouddeploy-operations-subscription"] ||
+        lastMessageData["clouddeploy-operations-subscription"].length !== operationsMessages.length
+      ) {
+        operationsContainer.innerHTML = "";
 
-    // Send the message to the backend
-    fetch('/send-message', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: message
-    })
-    .then(response => {
-      if (response.ok) {
-        messageInput.value = ''; // Clear the input after sending
-        updateMessages(); // Optionally refresh messages after sending
-      } else {
-        console.error('Failed to send message');
+        operationsMessages.forEach((msg) => {
+          // Pull the needed info out of msg.attributes
+          const releaseId = msg.attributes?.ReleaseId || "Unknown Release ID";
+          const action = msg.attributes?.Action || "Unknown Action";
+          const pipelineId = msg.attributes?.DeliveryPipelineId || "Unknown Pipeline";
+
+          const row = document.createElement("div");
+          // Same styling, or define a separate .clouddeploy-operations-row if you prefer
+          row.classList.add("message", "build-notification-row");
+
+          row.textContent = `Release: ${releaseId} | Action: ${action} | Pipeline: ${pipelineId}`;
+
+          // Click opens a popup with the complete JSON
+          row.addEventListener("click", () => {
+            const popupWindow = window.open("", "JSONPopup", "width=600,height=400,scrollbars=yes");
+            popupWindow.document.write(
+              `<pre style="font-family: monospace; white-space: pre;">${JSON.stringify(msg, null, 2)}</pre>`
+            );
+            popupWindow.document.close();
+          });
+
+          operationsContainer.appendChild(row);
+        });
+      }
+
+      // -------------------------------------
+      // CLOUD DEPLOY APPROVALS
+      // -------------------------------------
+      const approvalsMessages = data["clouddeploy-approvals-subscription"] || [];
+      const approvalsContainer = document.getElementById("clouddeploy-approvals-subscription");
+
+      if (
+        !lastMessageData["clouddeploy-approvals-subscription"] ||
+        lastMessageData["clouddeploy-approvals-subscription"].length !== approvalsMessages.length
+      ) {
+        approvalsContainer.innerHTML = "";
+
+        approvalsMessages.forEach((msg) => {
+          const { attributes } = msg;
+
+          const rolloutId = attributes?.RolloutId || "Unknown Rollout";
+          const releaseId = attributes?.ReleaseId || "Unknown Release";
+          const pipelineId = attributes?.DeliveryPipelineId || "Unknown Pipeline";
+          const action = attributes?.Action || "Unknown Action";
+
+          const row = document.createElement("div");
+          row.classList.add("message", "build-notification-row");
+          row.textContent = `Rollout: ${rolloutId} | Release: ${releaseId} | Pipeline: ${pipelineId} | Action: ${action}`;
+
+          // Click -> Open popup with full JSON
+          row.addEventListener("click", () => {
+            const popupWindow = window.open("", "JSONPopup", "width=600,height=400,scrollbars=yes");
+            popupWindow.document.write(
+              `<pre style="font-family: monospace; white-space: pre;">${JSON.stringify(msg, null, 2)}</pre>`
+            );
+            popupWindow.document.close();
+          });
+
+          // Show "Approve" button only if Action is "Required" AND manualApproval is missing
+          if (action === "Required" && !("manualApproval" in attributes)) {
+            const approveBtn = document.createElement("button");
+            approveBtn.textContent = "Approve";
+            approveBtn.style.marginLeft = "10px";
+
+            approveBtn.addEventListener("click", (event) => {
+              // Prevent the row click from firing
+              event.stopPropagation();
+
+              // Create a copy of the original message and update manualApproval
+              const updatedMsg = JSON.parse(JSON.stringify(msg));
+              updatedMsg.attributes.manualApproval = "true";
+
+              // Log the updated message to verify in the console
+              console.log("Approving, sending updated message:", updatedMsg);
+
+              // Convert to string and send
+              sendMessage(JSON.stringify(updatedMsg));
+            });
+
+            row.appendChild(approveBtn);
+          }
+
+          approvalsContainer.appendChild(row);
+        });
       }
     })
-    .catch(error => console.error('Error:', error));
   }
 
-    // Automatically update messages every 3 seconds
-    setInterval(updateMessages, 3000);
+
+
+function clearMessages() {
+  fetch("/clear-messages", { method: "POST" })
+    .then((response) => {
+      if (response.ok) {
+        lastMessageData = {};
+        // Also clear our global map for build notifications
+        buildNotificationsMap = {};
+        updateMessages();
+      }
+    })
+    .catch((error) => console.error("Error clearing messages:", error));
+}
+
+// Modified to accept an optional parameter: sendMessage(jsonString)
+function sendMessage(optionalMessage) {
+  // If `optionalMessage` was provided, use it. Otherwise, read from textarea.
+  let message;
+  if (optionalMessage) {
+    message = optionalMessage.trim().replace(/\n/g, "");
+  } else {
+    const messageInput = document.getElementById("message-input");
+    message = messageInput.value.trim().replace(/\n/g, "");
+  }
+
+  console.log("Sending message:", message); // Log to confirm
+
+  fetch("/send-message", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: message,
+  })
+    .then((response) => {
+      if (response.ok) {
+        // If we’re sending a custom message, we might not want to reset the textarea
+        const messageInput = document.getElementById("message-input");
+        if (messageInput) {
+          messageInput.value = "";
+        }
+        updateMessages();
+      } else {
+        console.error("Failed to send message");
+      }
+    })
+    .catch((error) => console.error("Error:", error));
+}
+
+// Auto-refresh
+setInterval(updateMessages, 3000);
