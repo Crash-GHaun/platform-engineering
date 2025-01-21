@@ -54,7 +54,10 @@ locals {
 # Create Cloud Functions using for_each
 resource "google_cloudfunctions2_function" "functions" {
   for_each = local.cloud_functions
-
+  depends_on = [
+    google_storage_bucket_object.functions,
+    google_project_iam_member.act_as
+  ]
   name    = each.key
   project = data.google_project.project.project_id
   location = var.region
